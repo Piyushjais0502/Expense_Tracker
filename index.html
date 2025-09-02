@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .income-border {
+            border-left: 4px solid #34d399; /* green-500 */
+        }
+        .expense-border {
+            border-left: 4px solid #ef4444; /* red-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl p-8 transform transition-all duration-500 ease-in-out hover:scale-[1.01] border border-gray-200">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-2">Expense Tracker</h1>
+        <p class="text-center text-gray-500 text-sm mb-6">Your personal finance dashboard.</p>
+
+        <!-- Balance Section -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-2xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-medium mb-1">Your Balance</h2>
+            <h3 id="balance-amount" class="text-5xl font-extrabold">₹0.00</h3>
+        </div>
+
+        <!-- Income & Expense Section -->
+        <div class="flex justify-between items-center bg-gray-50 rounded-2xl p-6 shadow-md mb-6 border border-gray-200">
+            <div class="flex-1 text-center">
+                <h4 class="text-lg font-medium text-gray-600">Income</h4>
+                <p id="income-amount" class="text-3xl font-bold text-green-500 mt-2">₹0.00</p>
+            </div>
+            <div class="w-px bg-gray-300 h-16 mx-4"></div>
+            <div class="flex-1 text-center">
+                <h4 class="text-lg font-medium text-gray-600">Expense</h4>
+                <p id="expense-amount" class="text-3xl font-bold text-red-500 mt-2">₹0.00</p>
+            </div>
+        </div>
+
+        <!-- Transaction Form -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Add New Transaction</h3>
+            <form id="transaction-form" class="space-y-4">
+                <div>
+                    <label for="description" class="text-gray-600 block mb-1">Description</label>
+                    <input type="text" id="description" placeholder="e.g., Groceries, Salary, etc." required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+                </div>
+                <div>
+                    <label for="amount" class="text-gray-600 block mb-1">Amount (₹)</label>
+                    <input type="number" id="amount" placeholder="e.g., -500 for expense, 2000 for income" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+                    Add Transaction
+                </button>
+            </form>
+        </div>
+
+        <!-- Transaction History -->
+        <div>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-800">History</h3>
+                <div class="flex space-x-2">
+                    <select id="filter-transactions" class="bg-gray-200 rounded-lg p-2 text-sm text-gray-800 focus:outline-none cursor-pointer">
+                        <option value="all">All</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                    <button id="clear-all-btn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+            <ul id="transaction-list" class="space-y-3">
+                <!-- Transactions will be inserted here by JavaScript -->
+            </ul>
+            <div id="no-transactions" class="text-center text-gray-400 mt-4 hidden">No transactions yet.</div>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="message-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full transform scale-100 transition-transform duration-300 ease-out">
+            <h3 id="modal-title" class="text-xl font-bold mb-2"></h3>
+            <p id="modal-message" class="text-gray-600 mb-4"></p>
+            <div id="modal-buttons" class="flex justify-end space-x-4">
+                <button id="modal-cancel" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none hidden">Cancel</button>
+                <button id="modal-confirm" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none hidden">Confirm</button>
+                <button id="modal-close" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const balanceEl = document.getElementById('balance-amount');
+        const incomeEl = document.getElementById('income-amount');
+        const expenseEl = document.getElementById('expense-amount');
+        const transactionForm = document.getElementById('transaction-form');
+        const transactionList = document.getElementById('transaction-list');
+        const noTransactionsEl = document.getElementById('no-transactions');
+        const messageModal = document.getElementById('message-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close');
+        const modalCancelBtn = document.getElementById('modal-cancel');
+        const modalConfirmBtn = document.getElementById('modal-confirm');
+        const filterSelect = document.getElementById('filter-transactions');
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        const transactionsKey = 'expenseTrackerTransactions';
+        let transactions = [];
+        let currentFilter = 'all';
+
+        // Modal event listeners
+        modalCloseBtn.addEventListener('click', () => {
+            messageModal.classList.add('hidden');
+            modalConfirmBtn.classList.add('hidden');
+            modalCancelBtn.classList.add('hidden');
+            modalCloseBtn.classList.remove('hidden');
+        });
+
+        modalCancelBtn.addEventListener('click', () => {
+            messageModal.classList.add('hidden');
+        });
+
+        function showMessageModal(title, message, isConfirmation = false, onConfirm = null) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            messageModal.classList.remove('hidden');
+
+            if (isConfirmation) {
+                modalCloseBtn.classList.add('hidden');
+                modalConfirmBtn.classList.remove('hidden');
+                modalCancelBtn.classList.remove('hidden');
+                modalConfirmBtn.onclick = () => {
+                    onConfirm();
+                    messageModal.classList.add('hidden');
+                };
+            } else {
+                modalCloseBtn.classList.remove('hidden');
+                modalConfirmBtn.classList.add('hidden');
+                modalCancelBtn.classList.add('hidden');
+            }
+        }
+
+        // Data persistence functions
+        function saveTransactions() {
+            try {
+                localStorage.setItem(transactionsKey, JSON.stringify(transactions));
+            } catch (e) {
+                console.error("Error saving to localStorage:", e);
+                showMessageModal("Error", "Failed to save data. Please check your browser settings.");
+            }
+        }
+
+        function loadTransactions() {
+            try {
+                const storedTransactions = localStorage.getItem(transactionsKey);
+                if (storedTransactions) {
+                    transactions = JSON.parse(storedTransactions);
+                } else {
+                    transactions = [];
+                }
+                updateUI();
+            } catch (e) {
+                console.error("Error loading from localStorage:", e);
+                showMessageModal("Error", "Failed to load data. Please clear your browser's local storage.");
+            }
+        }
+
+        function formatCurrency(amount) {
+            return `₹${Math.abs(amount).toFixed(2)}`;
+        }
+
+        function createTransactionElement(transaction) {
+            const isExpense = transaction.amount < 0;
+            const sign = isExpense ? '-' : '+';
+            const item = document.createElement('li');
+            item.setAttribute('data-id', transaction.id);
+
+            const amountClass = isExpense ? 'text-red-500' : 'text-green-500';
+            const borderClass = isExpense ? 'expense-border' : 'income-border';
+
+            const date = new Date(transaction.timestamp);
+            const formattedDate = date.toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            item.innerHTML = `
+                <div class="bg-gray-50 rounded-lg shadow-sm p-4 flex justify-between items-center transition duration-200 hover:bg-gray-100 ${borderClass}">
+                    <div class="flex flex-col">
+                        <span class="text-gray-800 font-medium">${transaction.description}</span>
+                        <span class="text-gray-400 text-xs mt-1">${formattedDate}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="${amountClass} font-semibold">
+                            ${sign}${formatCurrency(transaction.amount)}
+                        </span>
+                        <button class="delete-btn text-gray-400 hover:text-red-500 transition duration-200 focus:outline-none" aria-label="Delete transaction">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            const deleteBtn = item.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                deleteTransaction(transaction.id);
+            });
+            return item;
+        }
+
+        function updateUI() {
+            renderFilteredTransactions();
+        }
+
+        function renderFilteredTransactions() {
+            transactionList.innerHTML = '';
+            
+            const filteredTransactions = transactions.filter(t => {
+                if (currentFilter === 'income') return t.amount > 0;
+                if (currentFilter === 'expense') return t.amount < 0;
+                return true;
+            });
+            
+            let totalIncome = 0;
+            let totalExpense = 0;
+            transactions.forEach(t => {
+                if (t.amount > 0) {
+                    totalIncome += t.amount;
+                } else {
+                    totalExpense += t.amount;
+                }
+            });
+            
+            const balance = totalIncome + totalExpense;
+            balanceEl.textContent = `₹${balance.toFixed(2)}`;
+            incomeEl.textContent = `₹${totalIncome.toFixed(2)}`;
+            expenseEl.textContent = `₹${Math.abs(totalExpense).toFixed(2)}`;
+
+            if (filteredTransactions.length === 0) {
+                noTransactionsEl.classList.remove('hidden');
+            } else {
+                noTransactionsEl.classList.add('hidden');
+                filteredTransactions.forEach(t => {
+                    transactionList.appendChild(createTransactionElement(t));
+                });
+            }
+        }
+
+        transactionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            if (description.trim() === '' || isNaN(amount) || amount === 0) {
+                showMessageModal("Invalid Input", "Please enter a valid description and a non-zero amount.");
+                return;
+            }
+
+            const newTransaction = {
+                id: Date.now(),
+                description: description.trim(),
+                amount: amount,
+                timestamp: new Date().toISOString()
+            };
+            
+            transactions.unshift(newTransaction);
+            saveTransactions();
+            updateUI();
+            transactionForm.reset();
+        });
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveTransactions();
+            updateUI();
+        }
+        
+        clearAllBtn.addEventListener('click', () => {
+            showMessageModal("Confirm Deletion", "Are you sure you want to delete all transactions? This action cannot be undone.", true, () => {
+                transactions = [];
+                saveTransactions();
+                updateUI();
+                showMessageModal("Success", "All transactions have been deleted.");
+            });
+        });
+
+        filterSelect.addEventListener('change', (e) => {
+            currentFilter = e.target.value;
+            updateUI();
+        });
+
+        // Initialize the application
+        window.addEventListener('load', loadTransactions);
+    </script>
+</body>
+</html>
